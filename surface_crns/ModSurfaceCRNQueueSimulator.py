@@ -23,7 +23,7 @@ from surface_crns.views.time_display import TimeDisplay
 from surface_crns.views.text_display import TextDisplay
 from surface_crns.views.grid_display import SquareGridDisplay, HexGridDisplay
 from surface_crns.views.legend_display import LegendDisplay
-from surface_crns.simulators.queue_simulator import QueueSimulator
+from surface_crns.simulators.mod_queue_simulator import ModQueueSimulator
 from surface_crns.simulators.synchronous_simulator import SynchronousSimulator
 from surface_crns.simulators.event_history import EventHistory
 from surface_crns.pygbutton import PygButton
@@ -31,6 +31,7 @@ from surface_crns.pygbutton import PygButton
 import cProfile
 import optparse
 import sys
+import numpy as np
 from time import process_time
 
 import pygame
@@ -103,7 +104,7 @@ def main():
     simulate_surface_crn(manifest_filename)
 
 
-def simulate_surface_crn(manifest_filename, display_class = None,
+def simulate_surface_crn(manifest_filename, maskarray = None, display_class = None,
                          init_state = None):
     '''
     Runs a simulation, and displays it in a GUI window OR saves all frames
@@ -125,6 +126,17 @@ def simulate_surface_crn(manifest_filename, display_class = None,
     print("Reading information from manifest file " + manifest_filename + "...")
     manifest_options = \
                 readers.manifest_readers.read_manifest(manifest_filename)
+    print("Appending mask values")
+
+    #if maskarray.any() == None:
+    #    mask = maskarray
+    #else:
+    #    maskarray = np.ones(np.shape(manifest_options['init_state']))
+
+    mask = maskarray
+
+    manifest_options['mask_vals'] = mask
+
     opts = SurfaceCRNOptionParser(manifest_options)
 
     print(" Done.")
@@ -158,7 +170,7 @@ def simulate_surface_crn(manifest_filename, display_class = None,
             for x in range(grid.x_size):
                 for y in range(grid.y_size):
                     print("(" + str(x) + "," + str(y) + "): " + str(grid.grid[x,y]))
-        simulation = QueueSimulator(surface = grid,
+        simulation = ModQueueSimulator(surface = grid,
                                     transition_rules = opts.transition_rules,
                                     seed = opts.rng_seed,
                                     simulation_duration = opts.max_duration)
@@ -433,7 +445,7 @@ def simulate_surface_crn(manifest_filename, display_class = None,
                 pygame.image.save(legend_image, legend_name)
             if event.type == pygl.QUIT:
                 if opts.saving_movie:
-                    movie_filename.close()
+                    movie_file.close()
                 current_state = FINISHED_CLEAN
                 cleanup_and_exit(simulation, current_state)
         # Don't do anything if paused.

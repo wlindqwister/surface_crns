@@ -68,7 +68,7 @@ def GH_well_mixed_dvdt(xs, params):
 	k_RQ = params["k_RQ"]
 
 	dQ_dt = k_RQ * R - k_QA * A * Q
-	dA_dt = k_QA * A * R - k_AR * A
+	dA_dt = k_QA * A * A - k_AR * A
 	dR_dt = k_AR * A - k_RQ * R
 
 	return np.array([dQ_dt, dA_dt, dR_dt])
@@ -80,9 +80,9 @@ def main():
 		"k_RQ": 0.03
 		}
 
-	init_Q = 1
-	init_A = 0.1
-	init_R = 0.1
+	init_Q = 0.8
+	init_A = 0.37
+	init_R = 0.37
 	init_state = np.array([init_Q, init_A, init_R])
 
 	names = ["Q", "A", "R"]

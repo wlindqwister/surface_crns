@@ -1,5 +1,5 @@
 import numpy as np
-from surface_crns.base.node import Node
+from surface_crns.base.node import modNode
 import warnings
 
 class SquareGrid(object):
@@ -33,7 +33,7 @@ class SquareGrid(object):
         '''
         for x in range(self.x_size):
             for y in range(self.y_size):
-                self.grid[x,y] = Node()
+                self.grid[x,y] = modNode()
                 self.grid[x,y].position = (x,y)
         # Populate node neighbor lists
         for x in range(self.x_size):
@@ -80,6 +80,25 @@ class SquareGrid(object):
         for x in range(self.x_size):
             for y in range(self.y_size):
                 self.grid[x,y].state = state_grid[x,y]
+        self.clear_timestamps()
+
+    def set_global_modifiers(self, mod_grid):
+        '''
+        Set the modifiers of nodes using a 2D array or numpy array of modifier
+        values. Also resets timestamps.
+        '''
+        if isinstance(mod_grid, list):
+            mod_grid = np.array(mod_grid)
+        if mod_grid.shape != self.grid.shape:
+            warnings.warn(Warning("Modifier grid set to modifier with different " +
+                         "size than previously set. Changing size."))
+            self.grid = np.empty(mod_grid.shape, np.dtype(object))
+            self.x_size = mod_grid.shape[0]
+            self.y_size = mod_grid.shape[1]
+            self.populate_grid()
+        for x in range(self.x_size):
+            for y in range(self.y_size):
+                self.grid[x,y].mod = mod_grid[x,y]
         self.clear_timestamps()
 
     def get_global_state(self):
@@ -210,7 +229,7 @@ class HexGrid(SquareGrid):
         '''
         for x in range(self.x_size):
             for y in range(self.y_size):
-                self.grid[x,y] = Node()
+                self.grid[x,y] = modNode()
                 self.grid[x,y].position = (x,y)
         # Populate node neighbor lists
         for x in range(self.x_size):

@@ -40,6 +40,7 @@ class SurfaceCRNOptionParser:
            self.representative_cell_y = self.process_representative_cell_y(options)
         self.capture_directory = self.process_capture_directory(options)
         self.init_state = self.process_init_state(options)
+        self.mask = self.process_mask(options)
 
 
 
@@ -198,6 +199,20 @@ class SurfaceCRNOptionParser:
             if self.debug:
                 print("done.")
             return init_state
+        else:
+            if self.debug:
+                print("done.")
+            return None
+        
+    def process_mask(self, options):
+        if self.debug:
+            print("Processing mask values... ", end = "")
+        if 'mask_vals' in options:
+            mask = options['mask_vals']
+            self.grid.set_global_modifiers(mask)
+            if self.debug:
+                print("done.")
+            return mask
         else:
             if self.debug:
                 print("done.")

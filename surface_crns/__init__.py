@@ -7,5 +7,5 @@ from surface_crns.readers import *
 from surface_crns.simulators import *
 from surface_crns.views import *
 __all__ = ['base', 'models', 'profiling', 'readers', 'simulators', 'views',
-            'SurfaceCRNQueueSimulator']
+            'SurfaceCRNQueueSimulator', 'ModSurfaceCRNQueueSimulator']
 __version__ = "v1.2"

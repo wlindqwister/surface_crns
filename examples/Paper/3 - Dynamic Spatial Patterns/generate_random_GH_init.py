@@ -15,7 +15,7 @@ def main():
                 else:
                     state = "Q"
                 outfile.write(state + " ")
-            if row < 63:
+            if row < 65:
                 outfile.write("\n")
 
 if __name__ == "__main__":
