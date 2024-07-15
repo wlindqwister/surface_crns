@@ -38,7 +38,7 @@ def read_manifest(filename):
     Return value: A dictionary of options.
     '''
     file_location = filename[0:filename.rfind(os.sep)+1]
-    with open(filename, 'rU') as manifest_file:
+    with open(filename, 'r') as manifest_file:
         manifest_stream = remove_comments(splice_includes(manifest_file, 
                                                           file_location))
         return parse_manifest_stream(manifest_stream)
@@ -87,7 +87,7 @@ def splice_includes(manifest_stream, file_location):
             filename = line[len(include_mark):].strip()
             if not os.path.isfile(filename):
                 filename = file_location + filename
-            with open(filename, 'rU') as include_file:
+            with open(filename, 'r') as include_file:
                 for inner_line in splice_includes(include_file, file_location):
                     yield inner_line
         else:

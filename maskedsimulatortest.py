@@ -35,7 +35,7 @@ def circlebox(l, w, r):
                 width = 0)
     return im
 
-test = 'grain contact'
+test = 'grain contact right'
 
 # mask = np.array([[1, 1, 1, 0, 0, 0],
 #                [1, 1, 1, 0, 0, 0],
@@ -235,6 +235,126 @@ elif test == "grain contact amp":
     manifest_filename = "GR_graincontact_manifest.txt"
 
     #ModSurfaceCRNQueueSimulator.simulate_surface_crn(manifest_filename, maskarray = mask)
+
+elif test == "grain contact left":
+    im = Image.new('RGB', (200, 100), (0, 0, 0))
+    draw = ImageDraw.Draw(im)
+    draw.ellipse(xy = (24, 10, 109, 90),
+                fill = (255, 255, 255, 255),
+                outline = (255, 255, 255),
+                width = 0)
+    
+    draw.ellipse(xy = (96, 21, 115, 79),
+        fill = (200, 200, 200),
+        outline = (200, 200, 200),
+        width = 0)
+    
+    draw.ellipse(xy = (85, 21, 104, 79),
+        fill = (200, 200, 200),
+        outline = (200, 200, 200),
+        width = 0)
+    
+    draw.ellipse(xy = (91, 24, 109, 76),
+            fill = (150, 150, 150),
+            outline = (150, 150, 150),
+            width = 0)
+    
+    draw.ellipse(xy = (96, 24, 104, 76),
+        fill = (100, 100, 100),
+        outline = (100, 100, 100),
+        width = 0)
+    
+    draw.ellipse(xy = (99, 24, 101, 76),
+    fill = (0, 0, 0),
+    outline = (0, 0, 0),
+    width = 0)
+
+    draw.rectangle(xy = (100, 24, 110, 76),
+    fill = (0, 0, 0),
+    outline = (0, 0, 0),
+    width = 0)
+
+    imgray = im.convert('L')
+    imarray = 1 - np.array(imgray)/255
+
+    print(np.unique(imarray))
+
+    #contactregion = imarray[21:79, 80:120]
+    #blurred = gaussian_filter(contactregion, sigma=1.25)
+
+    #imarray[21:79, 80:120] = blurred
+
+    # plt.subplots(1, 1, figsize=(10, 8))
+    # plt.axis('off')
+    # plt.imshow(im, cmap='coolwarm')
+    # plt.colorbar()
+    # plt.show()
+
+    mask = np.transpose(imarray)
+
+    manifest_filename = "GR_graincontact_left_manifest.txt"
+
+    ModSurfaceCRNQueueSimulator.simulate_surface_crn(manifest_filename, maskarray = mask)
+
+elif test == "grain contact right":
+    im = Image.new('RGB', (200, 100), (0, 0, 0))
+    draw = ImageDraw.Draw(im)
+    draw.ellipse(xy = (91, 10, 176, 90),
+            fill = (255, 255, 255, 255),
+            outline = (255, 255, 255),
+            width = 0)
+    
+    draw.ellipse(xy = (96, 21, 115, 79),
+        fill = (200, 200, 200),
+        outline = (200, 200, 200),
+        width = 0)
+    
+    draw.ellipse(xy = (85, 21, 104, 79),
+        fill = (200, 200, 200),
+        outline = (200, 200, 200),
+        width = 0)
+    
+    draw.ellipse(xy = (91, 24, 109, 76),
+            fill = (150, 150, 150),
+            outline = (150, 150, 150),
+            width = 0)
+    
+    draw.ellipse(xy = (96, 24, 104, 76),
+        fill = (100, 100, 100),
+        outline = (100, 100, 100),
+        width = 0)
+    
+    draw.ellipse(xy = (99, 24, 101, 76),
+    fill = (0, 0, 0),
+    outline = (0, 0, 0),
+    width = 0)
+
+    draw.rectangle(xy = (90, 24, 100, 76),
+    fill = (0, 0, 0),
+    outline = (0, 0, 0),
+    width = 0)
+
+    imgray = im.convert('L')
+    imarray = 1 - np.array(imgray)/255
+
+    print(np.unique(imarray))
+
+    #contactregion = imarray[21:79, 80:120]
+    #blurred = gaussian_filter(contactregion, sigma=1.25)
+
+    #imarray[21:79, 80:120] = blurred
+
+    # plt.subplots(1, 1, figsize=(10, 8))
+    # plt.axis('off')
+    # plt.imshow(im, cmap='coolwarm')
+    # plt.colorbar()
+    # plt.show()
+
+    mask = np.transpose(imarray)
+
+    manifest_filename = "GR_graincontact_right_manifest.txt"
+
+    ModSurfaceCRNQueueSimulator.simulate_surface_crn(manifest_filename, maskarray = mask)
 
 else:
     print("No test case selected")
