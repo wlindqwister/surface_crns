@@ -1,0 +1,267 @@
+import numpy as np
+import matplotlib.pyplot as plt
+#import porespy as ps
+import time
+import pickle
+import pandas as pd
+import os
+from PIL import Image, ImageDraw
+from skimage.measure import perimeter, euler_number
+from scipy.optimize import curve_fit
+from surface_crns import SurfaceCRNQueueSimulator
+from surface_crns.models.grids import SquareGrid
+from surface_crns.readers.manifest_readers import read_manifest
+from surface_crns.options.option_processor import SurfaceCRNOptionParser
+from surface_crns.simulators.queue_simulator import QueueSimulator
+
+ROOT_DIR = os.path.expanduser("~")
+DATA_DIR = os.path.join(ROOT_DIR + '/projects/surface_crns/data/')
+CURRENT_DIR = os.getcwd()
+
+species_tracked = ["B", "A", "P"]
+
+#slice_factor = 20000
+slice_factor = 500
+
+def circlebox(l, w, r):
+    gx = w - 2*r
+    gy = l - 2*r
+    im = Image.new('RGB', (w, l), (0, 0, 0))
+    draw = ImageDraw.Draw(im)
+    draw.ellipse(xy = (-r, -r, r, r),
+                fill = (255, 255, 255, 255),
+                outline = (255, 255, 255),
+                width = 0)
+    draw.ellipse(xy = (r + gx, -r, w + r, r),
+                fill = (255, 255, 255, 255),
+                outline = (255, 255, 255),
+                width = 0)
+    draw.ellipse(xy = (-r, r + gy, r, l + r),
+                fill = (255, 255, 255, 255),
+                outline = (255, 255, 255),
+                width = 0)
+    draw.ellipse(xy = (r + gx, r + gy, w + r, l + r),
+                fill = (255, 255, 255, 255),
+                outline = (255, 255, 255),
+                width = 0)
+    return im
+
+def ManifestInitWriter(name, microstructure):
+    im = microstructure.astype(int)
+    
+    with open(name, 'w') as outfile:
+        for row in range(microstructure.shape[0]):
+            for col in range(microstructure.shape[1]):
+                if im[row, col] == 1:
+                    state = "A"
+                else:
+                    state = "B"
+                outfile.write(state + " ")
+            if row < 200:
+                outfile.write("\n")
+
+def simulate_without_display(manifest_file):
+    '''
+    Run until completion or max time, storing an array of species counts at
+    the times of each reaction, along with an array of times. At the end,
+    display a graph of species concentrations as they change.
+    '''
+
+    manifest_options = read_manifest(manifest_file)
+    opts = SurfaceCRNOptionParser(manifest_options)
+    simulator = QueueSimulator(surface = opts.grid,
+                               transition_rules = opts.transition_rules,
+                               seed = opts.rng_seed,
+                               simulation_duration = opts.max_duration)
+    times = [0]
+    concs = dict()
+    for species in species_tracked:
+        concs[species] = [0]
+    for node in opts.grid:
+        if node.state in concs:
+            concs[node.state][0] += 1
+    print(concs)
+    while not simulator.done():
+        next_rxn = simulator.process_next_reaction()
+        if next_rxn is None:
+            break
+        times.append(next_rxn.time)
+        for species in species_tracked:
+            concs[species].append(concs[species][-1])
+        for reactant in next_rxn.rule.inputs:
+            if reactant in concs:
+                concs[reactant][-1] -= 1
+        for product in next_rxn.rule.outputs:
+            if product in concs:
+                concs[product][-1] += 1
+
+    # for species in species_tracked:
+    #    plt.plot(times, concs[species], label = species)
+    # plt.legend()
+    # plt.xlabel("Time (s)")
+    # plt.ylabel("Packet Count (#)")
+    # plt.title("Evolution of Reaction Species")
+    # plt.show()
+    
+    return concs, times
+
+def Keqcalc(data):
+    Rmean = np.mean(data['P'][-500:])
+    Qmean = np.mean(data['B'][-500:])
+    Amean = np.mean(data['A'][-500:])
+    
+    return (Rmean)/(Qmean * Amean)
+
+def delete_adjacent_duplicates(df, columns):
+    """
+    Deletes rows in a DataFrame if the values in specified columns are the same
+    and the rows are next to each other.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        columns (list): The columns to check for duplicate values.
+
+    Returns:
+        pd.DataFrame: A DataFrame with adjacent duplicate rows removed.
+    """
+    # Use the shift method to compare each row with the previous one
+    mask = df[columns].shift() != df[columns]
+
+    # Keep rows where at least one column is different or it's the first row
+    filtered_df = df[mask.any(axis=1)]
+
+    return filtered_df
+
+def save_every_nth_row(df, file_name, n):
+    """
+    Saves every nth row of a DataFrame into a CSV file.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        file_name (str): The name of the output CSV file.
+        n (int): The step size for selecting rows.
+
+    Returns:
+        None
+    """
+    every_nth_row = df.iloc[::n]
+    every_nth_row.to_csv(file_name, index=False)
+
+percentages = [0.25]
+
+#percentages = [0.1, 0.5]
+
+resolution = 100
+
+radii = []
+
+for i in percentages:
+    radii.append(int(i*resolution))
+
+Keqlist = []
+porlist = []
+perlist = []
+
+for i in radii:
+    start = time.time()
+    print('Running test {} unit cell radius'.format(i))
+    
+    # Create each unit cell
+    im = circlebox(resolution, resolution, i)
+    
+    # plt.subplots(1, 1, figsize=(6, 6))
+    # plt.axis('off')
+    # fig = plt.imshow(im, cmap='gist_stern')
+    
+    imgray = im.convert('L')
+    imarray = np.array(imgray)
+    imarray[imarray == 255] = 1
+    imarray = imarray.astype('bool')
+    
+    # Calculate MF
+    # por = ps.metrics.porosity(imarray)
+    # per = perimeter(imarray)
+    # eu = euler_number(np.invert(imarray))
+    # print("Porosity = {}".format(por))
+    # print("Perimiter = {}".format(per))
+    # print("Euler Characteristic = {}".format(eu))
+    
+    # Create init file
+    print('Initial condition unit cell created')
+    ManifestInitWriter('GR_radii_{}_cell_init.txt'.format(i), imarray)
+    
+    manifest_filename = "GR_radii_{}_manifest.txt".format(i)
+    with open(manifest_filename, 'w') as outfile:
+        header = '''# Run settings
+pixels_per_node    = 3
+speedup_factor     = 10
+rng_seed           = 123123123
+max_duration       = 3000
+node_display       = Color
+wrap               = True
+
+# Transition rules
+!START_TRANSITION_RULES
+#A + Q -> R + A (1)
+#A -> R (0.6)
+#R -> Q (0.3)
+A + B -> P + P (0.4)
+P + P -> A + B (0.1)
+P + B -> B + P (1)
+!END_TRANSITION_RULES
+
+!START_COLORMAP
+B: (230,230,230)
+A: (255, 0, 0)
+P: (0, 100, 255)
+!END_COLORMAP
+
+
+!START_INIT_STATE
+!INCLUDE GR_radii_{}_cell_init.txt
+!END_INIT_STATE'''.format(i)
+        outfile.write(header)
+        
+    print('Manifest written')
+    
+    # Run simulation without display
+    print('Running surface CRN simulation')
+    conc, timepoint = simulate_without_display(manifest_filename)
+    print('Simulation completed')
+    
+    # Calculate Keq
+    print('P = {}'.format(np.mean(conc['P'][-500:])))
+    print('B = {}'.format(np.mean(conc['B'][-500:])))
+    print('A = {}'.format(np.mean(conc['A'][-500:])))
+    Keq = Keqcalc(conc)
+    
+    print('Keq = {}'.format(Keq))
+    
+    #Keqlist.append(Keq)
+    #porlist.append(por)
+    #perlist.append(per)
+    
+    # Save data in CSV
+    #sliced_conc = conc[::slice_factor]
+    df = pd.DataFrame(conc)
+    #df = (df/10000).round(3)
+    df.insert(loc=0, column='time', value=timepoint)
+
+    df_save = delete_adjacent_duplicates(df, species_tracked)
+
+    df_save = df_save.iloc[::slice_factor]
+
+    df_save.to_csv(DATA_DIR + 'GR_unitcell_data_radius_{}_test.csv'.format(i),index=False)
+    
+    stop = time.time()
+    print(stop-start)
+    
+    print('=================================================== \n')
+
+for species in species_tracked:
+    plt.plot(df_save['time'], df_save[species], label = species)
+plt.legend()
+plt.xlabel("Time (s)")
+plt.ylabel("Packet Count (#)")
+plt.title("Evolution of Reaction Species")
+plt.show()
